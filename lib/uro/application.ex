@@ -17,7 +17,7 @@ defmodule Uro.Application do
       # {Uro.Worker, arg},
       # Start to serve requests, typically the last entry
       UroWeb.Endpoint,
-      {MyApp.LobbyManager, []},
+      {Uro.LobbyManager, []},
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

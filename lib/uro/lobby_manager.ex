@@ -62,51 +62,51 @@ defmodule Uro.LobbyManager do
   end
 
   # Handles the JOIN message. Assigns a new lobby or joins an existing one.
-  defp handle_join(data, state) do
+  def handle_join(data, state) do
     lobby_name = if data == "", do: UUID.uuid4(), else: data
     lobbies = Map.update(state.lobbies, lobby_name, [], &(&1))
     {:noreply, %{state | lobbies: lobbies}}
   end
 
   # Handles the ID message. Identifies the client when it joins a room.
-  defp handle_id(id, state) do
+  def handle_id(id, state) do
     peers = Map.put(state.peers, id, %{})
     {:noreply, %{state | peers: peers}}
   end
 
   # Handles the PEER_CONNECT message. Notifies new peers in the same lobby.
-  defp handle_peer_connect(id, state) do
+  def handle_peer_connect(id, state) do
     IO.puts("Peer connected: #{id}")
     {:noreply, state}
   end
 
   # Handles the PEER_DISCONNECT message. Notifies when a peer in the same lobby disconnects.
-  defp handle_peer_disconnect(id, state) do
+  def handle_peer_disconnect(id, state) do
     IO.puts("Peer disconnected: #{id}")
     peers = Map.delete(state.peers, id)
     {:noreply, %{state | peers: peers}}
   end
 
   # Handles the OFFER message. Relays WebRTC offer to the destination peer.
-  defp handle_offer(id, data, state) do
+  def handle_offer(id, data, state) do
     IO.puts("Offer from #{id}: #{data}")
     {:noreply, state}
   end
 
   # Handles the ANSWER message. Relays WebRTC answer to the destination peer.
-  defp handle_answer(id, data, state) do
+  def handle_answer(id, data, state) do
     IO.puts("Answer from #{id}: #{data}")
     {:noreply, state}
   end
 
   # Handles the CANDIDATE message. Relays WebRTC candidate to the destination peer.
-  defp handle_candidate(id, data, state) do
+  def handle_candidate(id, data, state) do
     IO.puts("Candidate from #{id}: #{data}")
     {:noreply, state}
   end
 
   # Handles the SEAL message. Seals the lobby and notifies success.
-  defp handle_seal(state) do
+  def handle_seal(state) do
     IO.puts("Lobby sealed")
     {:noreply, state}
   end

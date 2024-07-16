@@ -11,7 +11,7 @@ defmodule UroWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  socket "/socket", UroWeb.UserSocket,
+  socket "/socket", Uro.UserSocket,
     websocket: true,
     longpoll: false
 
