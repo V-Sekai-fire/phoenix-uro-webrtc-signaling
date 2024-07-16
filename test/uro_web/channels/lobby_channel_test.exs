@@ -21,7 +21,7 @@ defmodule UroWeb.LobbyChannelTest do
       ref = push(socket, "join", %{"data" => "test_lobby"})
       assert_reply ref, :ok, reply
       assert %{id: id, type: 0, data: "test_lobby"} = reply
-      assert is_number(id)
+      assert is_integer(id)
     end
   end
 
@@ -31,48 +31,48 @@ defmodule UroWeb.LobbyChannelTest do
       assert_reply ref, :ok, _reply
       send(self(), :after_join)
       assert_push "id", %{id: user_id, type: 1, data: ""}
-      assert is_number(user_id)
+      assert is_integer(user_id)
     end
   end
 
   describe "PEER_CONNECT message" do
     test "server notifies new peers in the same lobby", %{socket: socket} do
-      push(socket, "peer_connect", %{"id" => "new_peer", "type" => 2, "data" => ""})
-      assert_broadcast "peer_connect", %{"id" => "new_peer", "type" => 2, "data" => ""}
+      push(socket, "peer_connect", %{"id" => 123, "type" => 2, "data" => ""})
+      assert_broadcast "peer_connect", %{"id" => 123, "type" => 2, "data" => ""}
     end
   end
 
   describe "PEER_DISCONNECT message" do
     test "server notifies when a peer disconnects", %{socket: socket} do
-      broadcast_from!(socket, "peer_disconnect", %{id: "disconnected_peer", type: 3, data: ""})
+      broadcast_from!(socket, "peer_disconnect", %{id: 456, type: 3, data: ""})
       assert_receive %Phoenix.Socket.Message{
         event: "peer_disconnect",
-        payload: %{id: "disconnected_peer", type: 3, data: ""}
+        payload: %{id: 456, type: 3, data: ""}
       }
     end
   end
 
   describe "OFFER message" do
     test "client sends WebRTC offer and server relays it", %{socket: socket} do
-      push(socket, "offer", %{id: "test_user", type: 4, data: "offer_data"})
+      push(socket, "offer", %{id: 789, type: 4, data: "offer_data"})
       assert_broadcast "offer", %{id: user_id, type: 4, data: "offer_data"}
-      assert is_number(user_id)
+      assert is_integer(user_id)
     end
   end
 
   describe "ANSWER message" do
     test "client sends WebRTC answer and server relays it", %{socket: socket} do
-      _ref = push(socket, "answer", %{"id" => "destination_peer", "data" => "answer_data"})
+      _ref = push(socket, "answer", %{"id" => 101112, "data" => "answer_data"})
       assert_broadcast "answer", %{id: user_id, type: 5, data: "answer_data"}
-      assert is_number(user_id)
+      assert is_integer(user_id)
     end
   end
 
   describe "CANDIDATE message" do
     test "client sends WebRTC candidate and server relays it", %{socket: socket} do
-      _ref = push(socket, "candidate", %{"id" => "destination_peer", "data" => "candidate_data"})
+      _ref = push(socket, "candidate", %{"id" => 131415, "data" => "candidate_data"})
       assert_broadcast "candidate", %{id: user_id, type: 6, data: "candidate_data"}
-      assert is_number(user_id)
+      assert is_integer(user_id)
     end
   end
 
@@ -80,7 +80,7 @@ defmodule UroWeb.LobbyChannelTest do
     test "SEAL message client seals the lobby and server notifies success", %{socket: socket} do
       _ref = push(socket, "join", %{"data" => "test_lobby"})
       assert_push "id", %{id: id, type: 1, data: ""}
-      assert is_number(id)
+      assert is_integer(id)
       socket = %{socket | assigns: Map.put(socket.assigns, :user_id, id)}
       _ref = push(socket, "seal", %{})
       assert_receive %Phoenix.Socket.Reply{

@@ -79,19 +79,19 @@ defmodule UroWeb.LobbyChannel do
   end
 
   # Handles incoming "offer" messages. Broadcasts the WebRTC offer to the destination peer.
-  def handle_in("offer", %{"id" => _id, "data" => data}, socket) do
+  def handle_in("offer", %{"id" => id, "data" => data}, socket) when is_integer(id) do
     broadcast_from!(socket, "offer", %{id: socket.assigns.user_id, type: 4, data: data})
     {:noreply, socket}
   end
 
   # Handles incoming "answer" messages. Broadcasts the WebRTC answer to the destination peer.
-  def handle_in("answer", %{"id" => _id, "data" => data}, socket) do
+  def handle_in("answer", %{"id" => id, "data" => data}, socket) when is_integer(id) do
     broadcast_from!(socket, "answer", %{id: socket.assigns.user_id, type: 5, data: data})
     {:noreply, socket}
   end
 
   # Handles incoming "candidate" messages. Broadcasts the WebRTC candidate to the destination peer.
-  def handle_in("candidate", %{"id" => _id, "data" => data}, socket) do
+  def handle_in("candidate", %{"id" => id, "data" => data}, socket) when is_integer(id) do
     broadcast_from!(socket, "candidate", %{id: socket.assigns.user_id, type: 6, data: data})
     {:noreply, socket}
   end
