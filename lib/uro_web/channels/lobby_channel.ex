@@ -1,10 +1,21 @@
 defmodule UroWeb.LobbyChannel do
   @moduledoc """
-  Handles WebSocket connections for lobby management and peer communication.
+  ```mermaid
+  stateDiagram
+      [*] --> Connecting: Client connects to WebSocket
+      Connecting --> Joining: Client sends JOIN message
+      Joining --> LobbyAssigned: Server assigns or confirms lobby
+      LobbyAssigned --> Identified: Server sends ID message with client ID
+      Identified --> PeerConnected: Server notifies new peer connection with PEER_CONNECT message
+      PeerConnected --> PeerDisconnected: Server notifies peer disconnection with PEER_DISCONNECT message
+      PeerConnected --> OfferSent: Client sends OFFER message
+      OfferSent --> AnswerReceived: Destination peer receives OFFER and sends ANSWER message
+      AnswerReceived --> CandidateGenerated: Client generates CANDIDATE message
+      CandidateGenerated --> Sealed: Client sends SEAL message to seal the lobby
+      Sealed --> [*]: Lobby is sealed, no new clients can join, and lobby will be destroyed after 10 seconds
+  ```
 
-  ## Signaling Protocol
-
-  Messages are the following:
+  ### Signaling Protocol
 
   | Type | Name            | Description                                                                                                                                                                                                 |
   |------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -17,13 +28,24 @@ defmodule UroWeb.LobbyChannel do
   | 6    | CANDIDATE       | Sent by the client when generating new WebRTC candidates then relayed back by the server to the destination peer.                                                                                                                                  |
   | 7    | SEAL            | Sent by client to seal the lobby (only the client that created it is allowed to seal a lobby), and then back by the server to notify success. When a lobby is sealed, no new client will be able to join, and the lobby will be destroyed (and clients disconnected) after 10 seconds. |
 
-  For relayed messages (i.e., for `OFFER`, `ANSWER`, and `CANDIDATE`), the client will set the `id` field as the destination peer, then the server will replace it with the id of the sending peer, and send it to the proper destination.
-
-  ## Message Fields
+  ### Message Fields
 
   - `id`: `number` - Represents a connected peer or `0`.
   - `type`: `number` - Represents the message type.
   - `data`: `string` - Contains the message-specific data.
+
+  ### Example websocat
+
+  ```bash
+  websocat "ws://localhost:4000/socket/websocket"
+  {"topic":"lobby:test_lobby","event":"phx_join","payload":{},"ref":1}
+  {"topic":"lobby:test_lobby","event":"join","payload":{"data":"test_lobby"},"ref":2}
+  {"topic":"lobby:test_lobby","event":"join","payload":{"data":"test_lobby"},"ref":3}
+  {"topic":"lobby:test_lobby","event":"offer","payload":{"id":"test_user","type":4,"data":"offer_data"},"ref":7}
+  {"topic":"lobby:test_lobby","event":"answer","payload":{"id":"destination_peer","data":"answer_data"},"ref":8}
+  {"topic":"lobby:test_lobby","event":"candidate","payload":{"id":"destination_peer","data":"candidate_data"},"ref":9}
+  {"topic":"lobby:test_lobby","event":"seal","payload":{},"ref":10}
+  ```
   """
 
   use UroWeb, :channel
