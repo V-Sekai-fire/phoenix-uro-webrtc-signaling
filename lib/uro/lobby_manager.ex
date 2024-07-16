@@ -1,3 +1,11 @@
+defmodule Uro.Lobby do
+  defstruct peers: [], sealed: false
+end
+
+defmodule Uro.State do
+  defstruct lobbies: %{}, peers: %{}
+end
+
 defmodule Uro.LobbyManager do
   @moduledoc """
   Manages lobbies and peers for a signaling protocol.
@@ -12,7 +20,8 @@ defmodule Uro.LobbyManager do
   Starts the GenServer with an initial state containing empty maps for lobbies and peers.
   """
   def start_link(_) do
-    GenServer.start_link(__MODULE__, %{lobbies: %{}, peers: %{}}, name: __MODULE__)
+    initial_state = %Uro.State{}
+    GenServer.start_link(__MODULE__, initial_state, name: __MODULE__)
   end
 
   @doc """
@@ -40,14 +49,14 @@ defmodule Uro.LobbyManager do
   @impl true
   def handle_call({:join_lobby, lobby_name, user_id}, _from, state) do
     if map_size(state.lobbies) < @max_lobbies do
-      lobbies = Map.update(state.lobbies, lobby_name, %{peers: [user_id], sealed: false}, fn lobby ->
+      lobbies = Map.update(state.lobbies, lobby_name, %Uro.Lobby{peers: [user_id]}, fn lobby ->
         if length(lobby.peers) < @max_peers and not lobby.sealed do
           %{lobby | peers: [user_id | lobby.peers]}
         else
           lobby
         end
       end)
-      {:reply, {:ok, lobby_name}, %{state | lobbies: lobbies}}
+      {:reply, {:ok, Map.get(lobbies, lobby_name)}, %{state | lobbies: lobbies}}
     else
       {:reply, {:error, :max_lobbies_reached}, state}
     end
@@ -55,18 +64,19 @@ defmodule Uro.LobbyManager do
 
   @impl true
   def handle_call({:seal_lobby, lobby_name, user_id}, _from, state) do
-    case Map.get(state.lobbies, lobby_name) do
+    lobbies = Map.get(state, :lobbies)
+    case Map.get(lobbies, lobby_name) do
       nil ->
         {:reply, {:error, :lobby_not_found}, state}
-
       %{peers: peers} = lobby ->
         if user_id in peers do
-          lobbies = Map.put(state.lobbies, lobby_name, %{lobby | sealed: true})
-          {:reply, :ok, %{state | lobbies: lobbies}}
+          updated_lobby = %{lobby | sealed: true}
+          updated_lobbies = Map.put(lobbies, lobby_name, updated_lobby)
+          Process.send_after(self(), {:destroy_lobby, lobby_name}, 10_000)
+          {:reply, :ok, %{state | lobbies: updated_lobbies}}
         else
           {:reply, {:error, :not_authorized}, state}
         end
-
       _ ->
         {:reply, {:error, :unknown_error}, state}
     end
@@ -97,10 +107,16 @@ defmodule Uro.LobbyManager do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_info({:destroy_lobby, lobby_name}, state) do
+    lobbies = Map.delete(state.lobbies, lobby_name)
+    {:noreply, %{state | lobbies: lobbies}}
+  end
+
   # Handles the JOIN message. Assigns a new lobby or joins an existing one.
   def handle_join(data, state) do
     lobby_name = if data == "", do: UUID.uuid4(), else: data
-    lobbies = Map.update(state.lobbies, lobby_name, %{peers: [], sealed: false}, &(&1))
+    lobbies = Map.update(state.lobbies, lobby_name, %Uro.Lobby{}, &(&1))
     {:noreply, %{state | lobbies: lobbies}}
   end
 
