@@ -71,6 +71,16 @@ defmodule UroWeb.LobbyChannel do
     {:noreply, socket}
   end
 
+  def handle_in("peer_connect", %{"id" => id, "type" => type, "data" => data}, socket) do
+    broadcast!(socket, "peer_connect", %{"id" => id, "type" => type, "data" => data})
+    {:noreply, socket}
+  end
+
+  def handle_in("peer_disconnect", %{"id" => id, "type" => type, "data" => data}, socket) do
+    broadcast!(socket, "peer_disconnect", %{"id" => id, "type" => type, "data" => data})
+    {:noreply, socket}
+  end
+
   @doc """
   Handles the `:after_join` message. Sends an ID message to the client.
   """

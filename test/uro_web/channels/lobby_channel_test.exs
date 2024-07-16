@@ -35,19 +35,22 @@ defmodule UroWeb.LobbyChannelTest do
     end
   end
 
-  # describe "PEER_CONNECT message" do
-  #   test "server notifies new peers in the same lobby", %{socket: socket} do
-  #     push(socket, "peer_connect", %{"id" => "new_peer", "type" => 2, "data" => ""})
-  #     assert_broadcast "peer_connect", %{"id" => "new_peer", "type" => 2, "data" => ""}
-  #   end
-  # end
+  describe "PEER_CONNECT message" do
+    test "server notifies new peers in the same lobby", %{socket: socket} do
+      push(socket, "peer_connect", %{"id" => "new_peer", "type" => 2, "data" => ""})
+      assert_broadcast "peer_connect", %{"id" => "new_peer", "type" => 2, "data" => ""}
+    end
+  end
 
-  # describe "PEER_DISCONNECT message" do
-  #   test "server notifies when a peer disconnects", %{socket: socket} do
-  #     broadcast_from!(socket, "peer_disconnect", %{id: "disconnected_peer", type: 3, data: ""})
-  #     assert_broadcast "peer_disconnect", %{id: "disconnected_peer", type: 3, data: ""}
-  #   end
-  # end
+  describe "PEER_DISCONNECT message" do
+    test "server notifies when a peer disconnects", %{socket: socket} do
+      broadcast_from!(socket, "peer_disconnect", %{id: "disconnected_peer", type: 3, data: ""})
+      assert_receive %Phoenix.Socket.Message{
+        event: "peer_disconnect",
+        payload: %{id: "disconnected_peer", type: 3, data: ""}
+      }
+    end
+  end
 
   # describe "OFFER message" do
   #   test "client sends WebRTC offer and server relays it", %{socket: socket} do
