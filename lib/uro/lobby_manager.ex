@@ -30,19 +30,45 @@ defmodule Uro.LobbyManager do
     GenServer.call(__MODULE__, {:join_lobby, lobby_name, user_id})
   end
 
+  @doc """
+  Seals the lobby with the given `lobby_name` if the `user_id` has permission.
+  """
+  def seal_lobby(lobby_name, user_id) do
+    GenServer.call(__MODULE__, {:seal_lobby, lobby_name, user_id})
+  end
+
   @impl true
   def handle_call({:join_lobby, lobby_name, user_id}, _from, state) do
     if map_size(state.lobbies) < @max_lobbies do
-      lobbies = Map.update(state.lobbies, lobby_name, [user_id], fn peers ->
-        if length(peers) < @max_peers do
-          [user_id | peers]
+      lobbies = Map.update(state.lobbies, lobby_name, %{peers: [user_id], sealed: false}, fn lobby ->
+        if length(lobby.peers) < @max_peers and not lobby.sealed do
+          %{lobby | peers: [user_id | lobby.peers]}
         else
-          peers
+          lobby
         end
       end)
       {:reply, {:ok, lobby_name}, %{state | lobbies: lobbies}}
     else
       {:reply, {:error, :max_lobbies_reached}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:seal_lobby, lobby_name, user_id}, _from, state) do
+    case Map.get(state.lobbies, lobby_name) do
+      nil ->
+        {:reply, {:error, :lobby_not_found}, state}
+
+      %{peers: peers} = lobby ->
+        if user_id in peers do
+          lobbies = Map.put(state.lobbies, lobby_name, %{lobby | sealed: true})
+          {:reply, :ok, %{state | lobbies: lobbies}}
+        else
+          {:reply, {:error, :not_authorized}, state}
+        end
+
+      _ ->
+        {:reply, {:error, :unknown_error}, state}
     end
   end
 
@@ -74,7 +100,7 @@ defmodule Uro.LobbyManager do
   # Handles the JOIN message. Assigns a new lobby or joins an existing one.
   def handle_join(data, state) do
     lobby_name = if data == "", do: UUID.uuid4(), else: data
-    lobbies = Map.update(state.lobbies, lobby_name, [], &(&1))
+    lobbies = Map.update(state.lobbies, lobby_name, %{peers: [], sealed: false}, &(&1))
     {:noreply, %{state | lobbies: lobbies}}
   end
 

@@ -31,9 +31,7 @@ defmodule UroWeb.LobbyChannel do
   use UroWeb, :channel
   alias Uro.LobbyManager
 
-  @max_peers 4096
   @max_lobbies 1024
-  @ping_interval 10_000
 
   # Joins a lobby with the given `lobby_name`. Assigns the user to the lobby and sends a join confirmation.
   def join("lobby:" <> lobby_name, _params, socket) do
@@ -58,19 +56,19 @@ defmodule UroWeb.LobbyChannel do
   end
 
   # Handles incoming "offer" messages. Broadcasts the WebRTC offer to the destination peer.
-  def handle_in("offer", %{"id" => id, "data" => data}, socket) do
+  def handle_in("offer", %{"id" => _id, "data" => data}, socket) do
     broadcast_from!(socket, "offer", %{id: socket.assigns.user_id, type: 4, data: data})
     {:noreply, socket}
   end
 
   # Handles incoming "answer" messages. Broadcasts the WebRTC answer to the destination peer.
-  def handle_in("answer", %{"id" => id, "data" => data}, socket) do
+  def handle_in("answer", %{"id" => _id, "data" => data}, socket) do
     broadcast_from!(socket, "answer", %{id: socket.assigns.user_id, type: 5, data: data})
     {:noreply, socket}
   end
 
   # Handles incoming "candidate" messages. Broadcasts the WebRTC candidate to the destination peer.
-  def handle_in("candidate", %{"id" => id, "data" => data}, socket) do
+  def handle_in("candidate", %{"id" => _id, "data" => data}, socket) do
     broadcast_from!(socket, "candidate", %{id: socket.assigns.user_id, type: 6, data: data})
     {:noreply, socket}
   end
@@ -83,16 +81,19 @@ defmodule UroWeb.LobbyChannel do
     {:noreply, socket}
   end
 
-  # Private function to handle joining a lobby
   defp handle_join(lobby_name, socket) do
-    case LobbyManager.join_lobby(lobby_name, socket.assigns.user_id) do
-      {:ok, lobby} ->
-        send(self(), :after_join)
-        push(socket, "joined", %{id: socket.assigns.user_id, type: 0, data: lobby})
-        {:ok, %{lobby: lobby}, assign(socket, :lobby, lobby)}
+    if map_size(socket.assigns.lobbies) < @max_lobbies do
+      case LobbyManager.join_lobby(lobby_name, socket.assigns.user_id) do
+        {:ok, lobby} ->
+          send(self(), :after_join)
+          push(socket, "joined", %{id: socket.assigns.user_id, type: 0, data: lobby})
+          {:ok, %{lobby: lobby}, assign(socket, :lobby, lobby)}
 
-      {:error, reason} ->
-        {:error, %{reason: reason}}
+        {:error, reason} ->
+          {:error, %{reason: reason}}
+      end
+    else
+      {:error, %{reason: :max_lobbies_reached}}
     end
   end
 end
