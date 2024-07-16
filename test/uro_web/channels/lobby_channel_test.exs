@@ -25,12 +25,15 @@ defmodule UroWeb.LobbyChannelTest do
     end
   end
 
-  # describe "ID message" do
-  #   test "server sends ID message after client joins", %{socket: socket} do
-  #     send(socket, :after_join)
-  #     assert_push "id", %{id: "test_user", type: 1, data: ""}
-  #   end
-  # end
+  describe "ID message" do
+    test "server sends ID message after client joins", %{socket: socket} do
+      ref = push(socket, "join", %{"data" => "test_lobby"})
+      assert_reply ref, :ok, _reply
+      send(self(), :after_join)
+      user_id = socket.assigns.user_id
+      assert_push "id", %{id: ^user_id, type: 1, data: ""}
+    end
+  end
 
   # describe "PEER_CONNECT message" do
   #   test "server notifies new peers in the same lobby", %{socket: socket} do
