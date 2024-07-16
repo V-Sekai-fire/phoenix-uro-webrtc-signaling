@@ -32,8 +32,18 @@ defmodule Uro.LobbyManager do
 
   @impl true
   def handle_call({:join_lobby, lobby_name, user_id}, _from, state) do
-    lobbies = Map.update(state.lobbies, lobby_name, [user_id], fn peers -> [user_id | peers] end)
-    {:reply, {:ok, lobby_name}, %{state | lobbies: lobbies}}
+    if map_size(state.lobbies) < @max_lobbies do
+      lobbies = Map.update(state.lobbies, lobby_name, [user_id], fn peers ->
+        if length(peers) < @max_peers do
+          [user_id | peers]
+        else
+          peers
+        end
+      end)
+      {:reply, {:ok, lobby_name}, %{state | lobbies: lobbies}}
+    else
+      {:reply, {:error, :max_lobbies_reached}, state}
+    end
   end
 
   @impl true
