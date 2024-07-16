@@ -33,12 +33,10 @@ defmodule UroWeb.LobbyChannel do
 
   @max_lobbies 1024
 
-  # Joins a lobby with the given `lobby_name`. Assigns the user to the lobby and sends a join confirmation.
-  def join("lobby:" <> lobby_name, _params, socket) do
-    handle_join(lobby_name, socket)
+  def join("lobby:" <> _room_id, _payload, socket) do
+    {:ok, socket}
   end
 
-  # Handles incoming "join" messages. Attempts to join the specified lobby.
   def handle_in("join", %{"data" => data}, socket) do
     handle_join(data, socket)
   end
@@ -46,12 +44,12 @@ defmodule UroWeb.LobbyChannel do
   # Handles incoming "seal" messages. Seals the lobby if the user has permission.
   def handle_in("seal", _params, socket) do
     case LobbyManager.seal_lobby(socket.assigns.lobby, socket.assigns.user_id) do
-      :ok ->
-        broadcast!(socket, "sealed", %{id: socket.assigns.user_id, type: 7, data: ""})
-        {:noreply, socket}
+    :ok ->
+    broadcast!(socket, "sealed", %{id: socket.assigns.user_id, type: 7, data: ""})
+    {:noreply, socket}
 
-      {:error, reason} ->
-        {:reply, {:error, %{reason: reason}}, socket}
+    {:error, reason} ->
+    {:reply, {:error, %{reason: reason}}, socket}
     end
   end
 
@@ -86,14 +84,13 @@ defmodule UroWeb.LobbyChannel do
       case LobbyManager.join_lobby(lobby_name, socket.assigns.user_id) do
         {:ok, lobby} ->
           send(self(), :after_join)
-          push(socket, "joined", %{id: socket.assigns.user_id, type: 0, data: lobby})
-          {:ok, %{lobby: lobby}, assign(socket, :lobby, lobby)}
+          {:reply, {:ok, %{id: socket.assigns.user_id, type: 0, data: lobby_name}}, assign(socket, :lobby, lobby)}
 
         {:error, reason} ->
-          {:error, %{reason: reason}}
+          {:reply, {:error, %{reason: reason}}, socket}
       end
     else
-      {:error, %{reason: :max_lobbies_reached}}
+      {:reply, {:error, %{reason: :max_lobbies_reached}}, socket}
     end
   end
 end

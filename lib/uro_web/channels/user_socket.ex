@@ -1,10 +1,13 @@
 defmodule Uro.UserSocket do
   use Phoenix.Socket
 
-  channel "lobby:*", Uro.LobbyChannel
+  channel "lobby:*", UroWeb.LobbyChannel
 
   def connect(_params, socket, _connect_info) do
-    {:ok, assign(socket, :user_id, random_id())}
+    user_id = random_id()
+    lobbies = %{}
+
+    {:ok, assign(socket, :user_id, user_id) |> assign(:lobbies, lobbies)}
   end
 
   def id(_socket), do: nil
